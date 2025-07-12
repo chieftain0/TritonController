@@ -1,0 +1,61 @@
+# Build artifacts
+/build/
+/build-*/
+/CMakeFiles/
+/CMakeCache.txt
+/Makefile
+/cmake_install.cmake
+/install_manifest.txt
+Libraries
+
+# Compiled object files
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+*.d
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*~
+*.user
+*.sublime-*
+*.code-workspace
+
+# STM32CubeIDE specific
+*.launch
+*.log
+*.settings/
+.project
+.cproject
+
+# Backup & temporary files
+*.bak
+*.tmp
+*.old
+*.orig
+*.rej
+*.DS_Store
+Thumbs.db
+
+# Output folders
+/Debug/
+/Release/
+
+# Auto-generated sources (HAL/LL/STM32CubeMX)
+MX_*/  # if using STM32CubeMX-generated folders
+Core/Inc/.mxproject
+Core/Src/.mxproject
+
+# Python virtual environments (if using scripts)
+/venv/
+/.env/
+
+# Misc
+tags
+TAGS
