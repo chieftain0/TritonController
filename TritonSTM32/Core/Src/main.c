@@ -55,6 +55,12 @@ volatile uint8_t RC_mode = 0;
 
 // BNO055 Custom Variables
 volatile uint8_t BNO055_requested = 0;
+volatile uint32_t imu_poll_timer = 0;
+const double imu_poll_period = 1000;
+bno055_vector_t DirVector;
+bno055_vector_t AccelVector;
+bno055_vector_t GyroVector;
+bno055_vector_t MagVector;
 
 /**
  * @brief  The application entry point.
@@ -117,9 +123,9 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim3, RC_CHANNELS[3]);
 
   // Initialize BNO055
-  // bno055_assignI2C(&hi2c1);
-  // bno055_setup();
-  // bno055_setOperationModeNDOF();
+  bno055_assignI2C(&hi2c1);
+  bno055_setup();
+  bno055_setOperationModeNDOF();
 
   // Initialize UART
   clear_buffer(UART3_RX_buf, BUFFER_SIZE);
@@ -150,8 +156,39 @@ int main(void)
       HAL_GPIO_WritePin(LED_PORT[1], LED_PIN[1], GPIO_PIN_SET);
     }
 
+    if (HAL_GetTick() - imu_poll_timer > imu_poll_period) // Poll BNO055 at 1/imu_poll_period frequency
+    {
+      imu_poll_timer = HAL_GetTick();
+      DirVector = bno055_getVectorEuler();
+      AccelVector = bno055_getVectorAccelerometer();
+      GyroVector = bno055_getVectorGyroscope();
+      MagVector = bno055_getVectorMagnetometer();
+    }
     if (BNO055_requested == 1) // Print BNO055 JSON to UART3
     {
+      cJSON *root = cJSON_CreateObject();
+      cJSON *imu = cJSON_CreateObject();
+
+      cJSON_AddItemToObject(root, "IMU", imu);
+      cJSON_AddNumberToObject(imu, "pitch", (double)DirVector.z);
+      cJSON_AddNumberToObject(imu, "roll", (double)DirVector.y);
+      cJSON_AddNumberToObject(imu, "heading", (double)DirVector.x);
+      cJSON_AddNumberToObject(imu, "accel_x", (double)AccelVector.x);
+      cJSON_AddNumberToObject(imu, "accel_y", (double)AccelVector.y);
+      cJSON_AddNumberToObject(imu, "accel_z", (double)AccelVector.z);
+      cJSON_AddNumberToObject(imu, "gyro_x", (double)GyroVector.x);
+      cJSON_AddNumberToObject(imu, "gyro_y", (double)GyroVector.y);
+      cJSON_AddNumberToObject(imu, "gyro_z", (double)GyroVector.z);
+      cJSON_AddNumberToObject(imu, "mag_x", (double)MagVector.x);
+      cJSON_AddNumberToObject(imu, "mag_y", (double)MagVector.x);
+      cJSON_AddNumberToObject(imu, "mag_z", (double)MagVector.x);
+
+      char *json_response = cJSON_Print(root);
+
+      HAL_UART_Transmit_IT(&huart3, (uint8_t *)json_response, strlen(json_response));
+
+      free(json_response);
+      cJSON_Delete(root);
       BNO055_requested = 0;
     }
   }
