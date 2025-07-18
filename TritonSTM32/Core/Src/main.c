@@ -1,4 +1,6 @@
 #include "main.h"
+#include "stdlib.h"
+#include "string.h"
 #include "stdbool.h"
 
 #include "bno055_stm32.h"
@@ -18,12 +20,12 @@ PCD_HandleTypeDef hpcd_USB_FS;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_PCD_Init(void);
-static void MX_TIM1_Init(void);
 
 // Custom Function Prototypes
 void clear_buffer(uint8_t *buffer, uint32_t size);
@@ -34,28 +36,28 @@ const uint16_t LED_PIN[4] = {GPIO_PIN_10, GPIO_PIN_9, GPIO_PIN_8, GPIO_PIN_15};
 
 // UART Custom Variables
 #define BUFFER_SIZE 1024
-volatile uint8_t UART3_RX_buf[BUFFER_SIZE] = {0};
-volatile int8_t UART3_RX_byte = 0;
-volatile uint32_t RX_index = 0;
+uint8_t UART3_RX_buf[BUFFER_SIZE] = {0};
+uint8_t UART3_RX_byte = 0;
+uint32_t RX_index = 0;
 
 // ESC Custom Variables (Timer 2 at 50Hz)
 const uint32_t ESC_CHANNELS[4] = {TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, TIM_CHANNEL_4};
-volatile uint32_t ESC_Values[4] = {1500, 1500, 1500, 1500};
-volatile uint32_t ESC_Prev_Values[4] = {1500, 1500, 1500, 1500};
+uint32_t ESC_Values[4] = {1500, 1500, 1500, 1500};
+uint32_t ESC_Prev_Values[4] = {1500, 1500, 1500, 1500};
 
 // SSR Custom Variables (Timer 4 at 50Hz)
 const uint32_t SSR_CHANNELS[2] = {TIM_CHANNEL_1, TIM_CHANNEL_2};
-volatile uint8_t SSR_enabled[2] = {0, 0};
+uint8_t SSR_enabled[2] = {0, 0};
 double SST_duty_cycle[2] = {0.0, 0.0};
 
 // RC Custom Variables (Input Capture from RC Receiver) (Timer 3)
 const uint32_t RC_CHANNELS[4] = {TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, TIM_CHANNEL_4};
-volatile uint32_t RC_Values[4] = {1500, 1500, 1500, 1500};
-volatile uint8_t RC_mode = 0;
+uint32_t RC_Values[4] = {1500, 1500, 1500, 1500};
+uint8_t RC_mode = 0;
 
 // BNO055 Custom Variables
-volatile uint8_t BNO055_requested = 0;
-volatile uint32_t imu_poll_timer = 0;
+uint8_t BNO055_requested = 0;
+uint32_t imu_poll_timer = 0;
 const double imu_poll_period = 1000;
 bno055_vector_t DirVector;
 bno055_vector_t AccelVector;
@@ -70,23 +72,31 @@ int main(void)
 {
   HAL_Init();
   SystemClock_Config();
-  MX_GPIO_Init();
-  MX_I2C1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_GPIO_Init();
+  MX_I2C1_Init();
   MX_USART3_UART_Init();
   MX_USB_PCD_Init();
 
-  // Enable Timers
+  // Enable Clocks
   __HAL_RCC_TIM1_CLK_ENABLE();
   __HAL_RCC_TIM2_CLK_ENABLE();
   __HAL_RCC_TIM3_CLK_ENABLE();
   __HAL_RCC_TIM4_CLK_ENABLE();
+  __HAL_RCC_AFIO_CLK_ENABLE();
+  __HAL_RCC_I2C1_CLK_ENABLE();
 
   // Enable BNO055
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+  HAL_Delay(10);
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+  // Initialize BNO055
+  bno055_assignI2C(&hi2c1);
+  bno055_setup();
+  bno055_setOperationModeNDOF();
 
   // Initialize ESC PWM channels
   HAL_TIM_PWM_Start(&htim2, ESC_CHANNELS[0]);
@@ -121,11 +131,6 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim3, RC_CHANNELS[1]);
   HAL_TIM_IC_Start_IT(&htim3, RC_CHANNELS[2]);
   HAL_TIM_IC_Start_IT(&htim3, RC_CHANNELS[3]);
-
-  // Initialize BNO055
-  bno055_assignI2C(&hi2c1);
-  bno055_setup();
-  bno055_setOperationModeNDOF();
 
   // Initialize UART
   clear_buffer(UART3_RX_buf, BUFFER_SIZE);
@@ -180,8 +185,8 @@ int main(void)
       cJSON_AddNumberToObject(imu, "gyro_y", (double)GyroVector.y);
       cJSON_AddNumberToObject(imu, "gyro_z", (double)GyroVector.z);
       cJSON_AddNumberToObject(imu, "mag_x", (double)MagVector.x);
-      cJSON_AddNumberToObject(imu, "mag_y", (double)MagVector.x);
-      cJSON_AddNumberToObject(imu, "mag_z", (double)MagVector.x);
+      cJSON_AddNumberToObject(imu, "mag_y", (double)MagVector.y);
+      cJSON_AddNumberToObject(imu, "mag_z", (double)MagVector.z);
 
       char *json_response = cJSON_Print(root);
 
@@ -427,19 +432,11 @@ void SystemClock_Config(void)
  */
 static void MX_I2C1_Init(void)
 {
-
-  /* USER CODE BEGIN I2C1_Init 0 */
-
-  /* USER CODE END I2C1_Init 0 */
-
-  /* USER CODE BEGIN I2C1_Init 1 */
-
-  /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 400000;
+  hi2c1.Init.ClockSpeed = 100000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_10BIT; // I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
   hi2c1.Init.OwnAddress2 = 0;
   hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
@@ -448,9 +445,6 @@ static void MX_I2C1_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN I2C1_Init 2 */
-
-  /* USER CODE END I2C1_Init 2 */
 }
 
 /**
@@ -793,6 +787,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = GPIO_PIN_13 | GPIO_PIN_14;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL; // Or use GPIO_PULLUP / GPIO_PULLDOWN if needed
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  // Configure PB8 and PB9 for I2C1
+  __HAL_AFIO_REMAP_I2C1_ENABLE(); // remap I2C1 to PB8 and PB9
+  GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
