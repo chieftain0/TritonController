@@ -8,7 +8,7 @@
 #include <ArduinoJson.h>
 
 // WiFi configuration
-const char *ssid = "TritonESP32";
+const char *ssid = "ATRONesp32";
 const char *password = "";
 
 // IMU and hardware timer
@@ -293,7 +293,7 @@ void handleRoot()
 
       <head>
           <meta name='viewport' content='width=device-width, initial-scale=1'>
-          <title>TritonESP32</title>
+          <title>ATRONesp32</title>
           <style>
               body {
                   text-align: center;
@@ -421,7 +421,7 @@ void handleRoot()
       </head>
 
       <body>
-          <h1>TritonESP32</h1>
+          <h1>ATRONesp32</h1>
           <h2>Remote Control</h2>
           <label>
               RC Mode:
