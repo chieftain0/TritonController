@@ -432,11 +432,13 @@ void SystemClock_Config(void)
  */
 static void MX_I2C1_Init(void)
 {
+  // Remap PB8 and PB9 for I2C1
+  __HAL_AFIO_REMAP_I2C1_ENABLE();
   hi2c1.Instance = I2C1;
   hi2c1.Init.ClockSpeed = 100000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_10BIT; // I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
   hi2c1.Init.OwnAddress2 = 0;
   hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
@@ -788,17 +790,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL; // Or use GPIO_PULLUP / GPIO_PULLDOWN if needed
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  // Configure PB8 and PB9 for I2C1
-  __HAL_AFIO_REMAP_I2C1_ENABLE(); // remap I2C1 to PB8 and PB9
-  GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN MX_GPIO_Init_2 */
-
-  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
