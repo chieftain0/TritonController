@@ -3,8 +3,6 @@
 #include "string.h"
 #include "stdbool.h"
 
-#include "bno055_stm32.h"
-
 #include "cJSON.h"
 
 // System Handles
@@ -59,10 +57,6 @@ uint8_t RC_mode = 0;
 uint8_t BNO055_requested = 0;
 uint32_t imu_poll_timer = 0;
 const double imu_poll_period = 1000;
-bno055_vector_t DirVector;
-bno055_vector_t AccelVector;
-bno055_vector_t GyroVector;
-bno055_vector_t MagVector;
 
 /**
  * @brief  The application entry point.
@@ -93,10 +87,6 @@ int main(void)
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
   HAL_Delay(10);
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
-  // Initialize BNO055
-  bno055_assignI2C(&hi2c1);
-  bno055_setup();
-  bno055_setOperationModeNDOF();
 
   // Initialize ESC PWM channels
   HAL_TIM_PWM_Start(&htim2, ESC_CHANNELS[0]);
@@ -164,10 +154,6 @@ int main(void)
     if (HAL_GetTick() - imu_poll_timer > imu_poll_period) // Poll BNO055 at 1/imu_poll_period frequency
     {
       imu_poll_timer = HAL_GetTick();
-      DirVector = bno055_getVectorEuler();
-      AccelVector = bno055_getVectorAccelerometer();
-      GyroVector = bno055_getVectorGyroscope();
-      MagVector = bno055_getVectorMagnetometer();
     }
     if (BNO055_requested == 1) // Print BNO055 JSON to UART3
     {
@@ -175,18 +161,18 @@ int main(void)
       cJSON *imu = cJSON_CreateObject();
 
       cJSON_AddItemToObject(root, "IMU", imu);
-      cJSON_AddNumberToObject(imu, "pitch", (double)DirVector.z);
-      cJSON_AddNumberToObject(imu, "roll", (double)DirVector.y);
-      cJSON_AddNumberToObject(imu, "heading", (double)DirVector.x);
-      cJSON_AddNumberToObject(imu, "accel_x", (double)AccelVector.x);
-      cJSON_AddNumberToObject(imu, "accel_y", (double)AccelVector.y);
-      cJSON_AddNumberToObject(imu, "accel_z", (double)AccelVector.z);
-      cJSON_AddNumberToObject(imu, "gyro_x", (double)GyroVector.x);
-      cJSON_AddNumberToObject(imu, "gyro_y", (double)GyroVector.y);
-      cJSON_AddNumberToObject(imu, "gyro_z", (double)GyroVector.z);
-      cJSON_AddNumberToObject(imu, "mag_x", (double)MagVector.x);
-      cJSON_AddNumberToObject(imu, "mag_y", (double)MagVector.y);
-      cJSON_AddNumberToObject(imu, "mag_z", (double)MagVector.z);
+      cJSON_AddNumberToObject(imu, "pitch", 0);
+      cJSON_AddNumberToObject(imu, "roll", 0);
+      cJSON_AddNumberToObject(imu, "heading", 0);
+      cJSON_AddNumberToObject(imu, "accel_x", 0);
+      cJSON_AddNumberToObject(imu, "accel_y", 0);
+      cJSON_AddNumberToObject(imu, "accel_z", 0);
+      cJSON_AddNumberToObject(imu, "gyro_x", 0);
+      cJSON_AddNumberToObject(imu, "gyro_y", 0);
+      cJSON_AddNumberToObject(imu, "gyro_z", 0);
+      cJSON_AddNumberToObject(imu, "mag_x", 0);
+      cJSON_AddNumberToObject(imu, "mag_y", 0);
+      cJSON_AddNumberToObject(imu, "mag_z", 0);
 
       char *json_response = cJSON_Print(root);
 

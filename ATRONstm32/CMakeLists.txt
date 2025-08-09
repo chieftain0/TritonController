@@ -39,13 +39,6 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
-# Add BNO055 library
-if(NOT EXISTS ${CMAKE_SOURCE_DIR}/Libraries/bno055_stm32)
-    execute_process(
-        COMMAND git clone https://github.com/chieftain0/bno055_stm32.git ${CMAKE_SOURCE_DIR}/Libraries/bno055_stm32
-    )
-endif()
-
 # Add JSON library
 if(NOT EXISTS ${CMAKE_SOURCE_DIR}/Libraries/cJSON)
     execute_process(
@@ -61,7 +54,6 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    Libraries/bno055_stm32/bno055.c
     Libraries/cJSON/cJSON.c
 )
 
@@ -69,7 +61,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     Core/Inc 
-    Libraries/bno055_stm32
     Libraries/cJSON
 )
 
